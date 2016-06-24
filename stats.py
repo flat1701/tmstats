@@ -12,9 +12,9 @@ class FactionStat(object):
         self.name = name
         self.events = game["events"]["faction"][name]
         self.user  = game["factions2"][name]
-        self.score = self.events["vp"]["round"]["all"]
+        self.score = self.events["vp"]["round"]["all"] + 20
         self.numplayers = game["player_count"]
-        avgscore = float( game["events"]["faction"]["all"]["vp"]["round"]["all"] ) / self.numplayers
+        avgscore = float( game["events"]["faction"]["all"]["vp"]["round"]["all"] ) / self.numplayers + 20
         self.margin = self.score  - avgscore
         self.parse_events()
         del self.events #don't need this anymore!
@@ -97,11 +97,11 @@ def parse_game_file( game_fn ):
     else:
         openfunc = open
     with openfunc( game_fn ) as game_file:
-        games = json.load( game_file )
         print( "parsing " + game_fn + "..." )
+        games = json.load( game_file )
         for game in games:
             f = dict( [(i["faction"],i["player"]) for i in game["factions"]])
-            if "player1" in f or "player2" in f or "player3" in f or "player4" in f or "player5" in f:
+            if "player1" in f or "player2" in f or "player3" in f or "player4" in f or "player5" in f or "player6" in f or "player7" in f:
                 print("Skpping game with incomplete players...")
                 continue
             game["factions2"] = f;
@@ -124,9 +124,15 @@ def parse_games( game_list = None ):
         game_list = map( lambda g: GAME_PATH + os.path.sep + g, os.listdir( GAME_PATH ) )
     for game in game_list:
         try:
-            allstats.extend( parse_game_file( game ) )
+            if '.json' in game:
+                allstats.extend( parse_game_file( game ) )
+            else:
+                print game, "is not json"
         except KeyboardInterrupt, e:
             break
+        except TypeError, e:
+            print game, "is not a game json"
+            continue
     return allstats
 
 
@@ -144,6 +150,8 @@ except:
 
 def get_rating( player, faction ):
     if player not in ratings:
+        return 0
+    if "faction_breakdown" not in ratings[player]:
         return 0
     if faction not in ratings[player]["faction_breakdown"]:
         return 0
@@ -185,7 +193,7 @@ def get_key( faction ):
     key += str( get_rating( faction.user, faction.name ))
     key += "".join( str(i) for i in tuple(faction.B[:,1]))
     key += str(faction.BON[0])
-    key += "".join( hex(i+1)[-2] for i in tuple(numpy.where( faction.FAV == 1 )[0]))
+    key += "".join( hex(i+1)[-1] for i in tuple(numpy.where( faction.FAV == 1 )[0]))
     return key
 
 
@@ -222,7 +230,7 @@ def save_stats( statpool, filename = "stats.json" ):
         if x.n == 1:
             return int(10*x.M1)
         else:
-            return [x.n,int(10*x.M1),int(10*x.M2),int(10*x.M3),int(10*x.M4)]
+            return [x.n,int(10.0*x.M1),int(10.0*x.M2),int(10.0*x.M3),int(10.0*x.M4)]
 
     with open( filename, "w+") as f:
         json.dump( statpool, f, default = jsonify )
@@ -230,7 +238,7 @@ def save_stats( statpool, filename = "stats.json" ):
 if __name__ == "__main__":
     allstats = load()
     if not allstats:
-        if not os.path.isfile( GAME_PATH ):
+        if not os.path.isdir( GAME_PATH ):
             print( "You should download some games (see http://terra.snellman.net/data/events/ ) to "+GAME_PATH )
             exit(1)
         allstats = parse_games()
