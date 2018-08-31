@@ -20,6 +20,9 @@ MAPDICT = {
     'c07f36f9e050992d2daf6d44af2bc51dca719c46': 'h', # Loon Lakes v1.5
     'fdb13a13cd48b7a3c3525f27e4628ff6905aa5b1': 'i', # Loon Lakes v1.6
     '224736500d20520f195970eb0fd4c41df040c08c': 'j', # Fjords v1.0
+    '54919e13090127079e7cc3540ad0065311f2ecd7': 'k', # Fjords v2.0
+    '91645cdb135773c2a7a50e5ca9cb18af54c664c4': 'l', # Original [2017 vp]
+    '2afadc63f4d81e850b7c16fb21a1dcd29658c392': 'm', # Fjords v2.1
     }
 
 BLACKLIST = [
@@ -41,7 +44,7 @@ BLACKLIST = [
     "DvMvRvB4", # CM double pass bug
     "marcelp24", # CM double pass bug
     "5", # S1(SPD>>2) at Round5
-    "0627puyo", #early PBF
+    "0627puyo", #early PBF from Analyze/RatingData.pm
     "10", #early PBF
     "17", #early PBF
     "19", #early PBF
@@ -83,9 +86,9 @@ class FactionStat(object):
         self.globals = game["events"]["global"]
         fac_events = game["events"]["faction"][name]
         self.user = game["factions2"][name]
-        self.score = fac_events["vp"]["round"]["all"]+20
+        self.score = fac_events["vp"]["round"]["all"]
         self.numplayers = game["player_count"]
-        avgscore = float(game["events"]["faction"]["all"]["vp"]["round"]["all"]) / self.numplayers + 20
+        avgscore = float(game["events"]["faction"]["all"]["vp"]["round"]["all"]) / self.numplayers
         self.margin = self.score  - avgscore
         self.map_type = MAPDICT[game["base_map"]]
         self.all_bons = self.parse_picked_bonus(game["events"]["faction"]["all"])
@@ -258,7 +261,7 @@ def save(allstats):
 
 def parse_game_file(game_fn):
     if debug:
-        print "game_id,faction,result_key,vp,margin,R1,R2,R3,R4,R5,R6"
+        print "game_id,player_id,faction,result_key,vp,margin,R1,R2,R3,R4,R5,R6"
     stats = []
     if game_fn[-2:] == "gz":
         openfunc = gzip.open
@@ -304,12 +307,12 @@ def parse_game_file(game_fn):
                         faction1.rank_in_game += 1
             if debug:
                 for s in factions:
-                    print game["game"]+","+s.name+","+get_key(s)+","+str(s.score)+","+str(s.margin)+","+str(s.score_tiles["1"])+","+str(s.score_tiles["2"])+","+str(s.score_tiles["3"])+","+str(s.score_tiles["4"])+","+str(s.score_tiles["5"])+","+str(s.score_tiles["6"])
+                    print game["game"]+","+str(s.user)+","+s.name+","+get_key(s)+","+str(s.score)+","+str(s.margin)+","+str(s.score_tiles["1"])+","+str(s.score_tiles["2"])+","+str(s.score_tiles["3"])+","+str(s.score_tiles["4"])+","+str(s.score_tiles["5"])+","+str(s.score_tiles["6"])
             stats += factions
     stats_fn = "docs/stats" + game_fn[8:10] + game_fn[11:13] + ".json"
     if not os.path.isfile(stats_fn):
         save_stats(compute_stats(stats, get_key), stats_fn)
-    return stats
+    return []
 
 def parse_games(game_list=None):
     allstats = []
@@ -317,7 +320,7 @@ def parse_games(game_list=None):
         game_list = map(lambda g: GAME_PATH + os.path.sep + g, os.listdir(GAME_PATH))
     for game in game_list:
         try:
-            #allstats = []
+            allstats = []
             if '.json' in game:
                 allstats.extend(parse_game_file(game))
             else:
@@ -327,7 +330,7 @@ def parse_games(game_list=None):
         #except TypeError, e:
         #    print game, "is not game json"
         #    continue
-    return allstats
+    return compute_stats(allstats, get_key)
 
 
 """
@@ -534,8 +537,9 @@ if __name__ == "__main__":
         allstats = parse_games()
         #save( allstats )
     print >> sys.stderr, "Computing...",
-    save_stats(compute_stats(allstats, get_key), "docs/stats.json")
+    #save_stats(allstats, "docs/stats.json")
 
-    save_stats(compute_stats(allstats, get_key2), "docs/chooser.json")
+    #save_stats(compute_stats(allstats, get_key2), "docs/chooser.json")
     print >> sys.stderr, "Finished"
     #save_raw( statpool )
+    print >> sys.stderr, "run jq -s add stats1*.json > docs/stats.json"
