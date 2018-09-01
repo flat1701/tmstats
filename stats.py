@@ -542,4 +542,4 @@ if __name__ == "__main__":
     #save_stats(compute_stats(allstats, get_key2), "docs/chooser.json")
     print >> sys.stderr, "Finished"
     #save_raw( statpool )
-    print >> sys.stderr, "run jq -s add stats1*.json > docs/stats.json"
+    print >> sys.stderr, "run jq -s add docs/stats1*.json > docs/stats.json"
